@@ -412,6 +412,7 @@ namespace StackExchange.Exceptional
             foreach (var err in WriteQueue.Where(err => e.ErrorHash == err.ErrorHash))
             {
                 err.DuplicateCount++;
+                e.IsOriginalError = false;
                 return;
             }
 
