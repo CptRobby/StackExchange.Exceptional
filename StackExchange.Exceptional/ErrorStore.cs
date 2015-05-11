@@ -648,6 +648,14 @@ namespace StackExchange.Exceptional
                     exCursor = exCursor.InnerException;
                 }
 
+                //Log InnerException details (though it only gets the ToString(), which typically includes the name and stack trace)
+                exCursor = ex.InnerException;
+                for (int i = 1; exCursor != null; i++)
+                {
+                    error.CustomData.Add("InnerException-" + i.ToString(), exCursor.ToString());
+                    exCursor = exCursor.InnerException;
+                }
+
                 if (appendFullStackTrace)
                 {
                     var frames = new StackTrace(fNeedFileInfo: true).GetFrames();
