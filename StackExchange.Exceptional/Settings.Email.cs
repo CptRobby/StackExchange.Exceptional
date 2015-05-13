@@ -46,9 +46,7 @@ namespace StackExchange.Exceptional
         /// <include file='SharedDocs.xml' path='SharedDocs/IEmailSettings/Member[@name="SMTPEnableSSL"]/*' />
         bool SMTPEnableSSL { get; }
 
-        /// <summary>
-        /// Flags whether or not emails are sent for duplicate errors. The config file attribute for this is "preventDuplicates".
-        /// </summary>
+        /// <include file='SharedDocs.xml' path='SharedDocs/IEmailSettings/Member[@name="PreventDuplicates"]/*' />
         bool PreventDuplicates { get; }
     }
     
@@ -73,10 +71,7 @@ namespace StackExchange.Exceptional
         public string SMTPPassword { get; set; }
         /// <include file='SharedDocs.xml' path='SharedDocs/IEmailSettings/Member[@name="SMTPEnableSSL"]/*' />
         public bool SMTPEnableSSL { get; set; }
-
-        /// <summary>
-        /// Flags whether or not emails are sent for duplicate errors. The config file attribute for this is "preventDuplicates".
-        /// </summary>
+        /// <include file='SharedDocs.xml' path='SharedDocs/IEmailSettings/Member[@name="PreventDuplicates"]/*' />
         public bool PreventDuplicates { get; set; }
 
         /// <summary>
@@ -144,7 +139,7 @@ namespace StackExchange.Exceptional
         {
             get { return (bool)this["smtpEnableSsl"]; }
         }
-
+        /// <include file='SharedDocs.xml' path='SharedDocs/IEmailSettings/Member[@name="PreventDuplicates"]/*' />
         [ConfigurationProperty("preventDuplicates"), DefaultValue(typeof(bool), "false")]
         public bool PreventDuplicates
         {
