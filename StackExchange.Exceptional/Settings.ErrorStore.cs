@@ -48,6 +48,20 @@ namespace StackExchange.Exceptional
         public int Size => (int)this["size"];
 
         /// <summary>
+        /// Defines whether the ErrorStore should try to use Error.LastDuplicateDate or not
+        /// </summary>
+        [ConfigurationProperty("includeLastDuplicateDate"), DefaultValue(false)]
+        public bool IncludeLastDuplicateDate { get { return this["includeLastDuplicateDate"] as bool? ?? false; } }
+
+        /// <summary>
+        /// If this is true, then the criteria for rolling up errors uses the Error.LastDuplicateDate instead of Error.CreationDate.
+        /// This way the RollupSeconds would be the minimum number of seconds that would have to pass without matching errors occurring
+        /// before a new record would be created. Has no effect if IncludeLastDuplicateDate is not true.
+        /// </summary>
+        [ConfigurationProperty("rollupUsingLastDuplicateDate"), DefaultValue(false)]
+        public bool RollupUsingLastDuplicateDate { get { return this["rollupUsingLastDuplicateDate"] as bool? ?? false; } }
+
+        /// <summary>
         /// The duration in seconds of error groups to rollup, similar errors within this timespan will be shown as duplicates
         /// </summary>
         [ConfigurationProperty("rollupSeconds"), DefaultValue(typeof(int), "600")]

@@ -61,6 +61,24 @@ namespace StackExchange.Exceptional.Stores
         public override string Name => "SQL Error Store";
 
         /// <summary>
+        /// Gets whether the ErrorStore will use Error.LastDuplicateDate or not
+        /// </summary>
+        public override bool IncludeLastDuplicateDate
+        {
+            get { return Settings.Current.ErrorStore.IncludeLastDuplicateDate; }
+        }
+
+        /// <summary>
+        /// If this is true, then the criteria for rolling up errors uses the Error.LastDuplicateDate instead of Error.CreationDate.
+        /// This way the RollupSeconds would be the minimum number of seconds that would have to pass without matching errors occurring
+        /// before a new record would be created. Has no effect if IncludeLastDuplicateDate is not true.
+        /// </summary>
+        public bool RollupUsingLastDuplicateDate
+        {
+            get { return IncludeLastDuplicateDate && Settings.Current.ErrorStore.RollupUsingLastDuplicateDate; }
+        }
+
+        /// <summary>
         /// Protects an error from deletion, by making IsProtected = 1 in the database
         /// </summary>
         /// <param name="guid">The guid of the error to protect</param>
@@ -169,26 +187,31 @@ Update Exceptions
         {
             using (var c = GetConnection())
             {
+                DynamicParameters queryParams;
                 if (RollupThreshold.HasValue && error.ErrorHash.HasValue)
                 {
-                    var queryParams = new DynamicParameters(new
-                        {
-                            error.DuplicateCount,
-                            error.ErrorHash,
-                            ApplicationName = error.ApplicationName.Truncate(50),
-                            minDate = DateTime.UtcNow.Add(RollupThreshold.Value.Negate())
-                        });
+                    if (IncludeLastDuplicateDate) error.LastDuplicateDate = ExtensionMethods.MaxDate(error.CreationDate, error.LastDuplicateDate);
+                    queryParams = new DynamicParameters(new
+                    {
+                        error.DuplicateCount,
+                        error.ErrorHash,
+                        ApplicationName = error.ApplicationName.Truncate(50),
+                        minDate = DateTime.UtcNow.Add(RollupThreshold.Value.Negate())
+                    });
                     queryParams.Add("@newGUID", dbType: DbType.Guid, direction: ParameterDirection.Output);
-                    var count = c.Execute(@"
+                    if (IncludeLastDuplicateDate) queryParams.Add("@LastDuplicateDate", error.LastDuplicateDate);
+                    var count = c.Execute(string.Format(@"
 Update Exceptions 
-   Set DuplicateCount = DuplicateCount + @DuplicateCount,
+   Set DuplicateCount = DuplicateCount + @DuplicateCount,{0}
        @newGUID = GUID
  Where Id In (Select Top 1 Id
                 From Exceptions 
                Where ErrorHash = @ErrorHash
                  And ApplicationName = @ApplicationName
                  And DeletionDate Is Null
-                 And CreationDate >= @minDate)", queryParams);
+                 And {1} >= @minDate)",
+                    IncludeLastDuplicateDate ? " LastDuplicateDate = Case When LastDuplicateDate > @LastDuplicateDate Then LastDuplicateDate Else @LastDuplicateDate End," : "",
+                    RollupUsingLastDuplicateDate ? "LastDuplicateDate" : "CreationDate"), queryParams);
                     // if we found an error that's a duplicate, jump out
                     if (count > 0)
                     {
@@ -198,30 +221,32 @@ Update Exceptions
                 }
 
                 error.FullJson = error.ToJson();
-
-                c.Execute(@"
-Insert Into Exceptions (GUID, ApplicationName, MachineName, CreationDate, Type, IsProtected, Host, Url, HTTPMethod, IPAddress, Source, Message, Detail, StatusCode, SQL, FullJson, ErrorHash, DuplicateCount)
-Values (@GUID, @ApplicationName, @MachineName, @CreationDate, @Type, @IsProtected, @Host, @Url, @HTTPMethod, @IPAddress, @Source, @Message, @Detail, @StatusCode, @SQL, @FullJson, @ErrorHash, @DuplicateCount)",
-                    new {
-                            error.GUID,
-                            ApplicationName = error.ApplicationName.Truncate(50),
-                            MachineName = error.MachineName.Truncate(50),
-                            error.CreationDate,
-                            Type = error.Type.Truncate(100),
-                            error.IsProtected,
-                            Host = error.Host.Truncate(100),
-                            Url = error.Url.Truncate(500),
-                            HTTPMethod = error.HTTPMethod.Truncate(10), // this feels silly, but you never know when someone will up and go crazy with HTTP 1.2!
-                            error.IPAddress,
-                            Source = error.Source.Truncate(100),
-                            Message = error.Message.Truncate(1000),
-                            error.Detail,
-                            error.StatusCode,
-                            error.SQL,
-                            error.FullJson,
-                            error.ErrorHash,
-                            error.DuplicateCount
-                        });
+                queryParams = new DynamicParameters(new
+                    {
+                        error.GUID,
+                        ApplicationName = error.ApplicationName.Truncate(50),
+                        MachineName = error.MachineName.Truncate(50),
+                        error.CreationDate,
+                        Type = error.Type.Truncate(100),
+                        error.IsProtected,
+                        Host = error.Host.Truncate(100),
+                        Url = error.Url.Truncate(500),
+                        HTTPMethod = error.HTTPMethod.Truncate(10), // this feels silly, but you never know when someone will up and go crazy with HTTP 1.2!
+                        error.IPAddress,
+                        Source = error.Source.Truncate(100),
+                        Message = error.Message.Truncate(1000),
+                        error.Detail,
+                        error.StatusCode,
+                        error.SQL,
+                        error.FullJson,
+                        error.ErrorHash,
+                        error.DuplicateCount
+                    });
+                if (IncludeLastDuplicateDate) queryParams.Add("@LastDuplicateDate", error.LastDuplicateDate);
+                c.Execute(string.Format(@"
+Insert Into Exceptions (GUID, ApplicationName, MachineName, CreationDate, Type, IsProtected, Host, Url, HTTPMethod, IPAddress, Source, Message, Detail, StatusCode, SQL, FullJson, ErrorHash, DuplicateCount{0})
+Values (@GUID, @ApplicationName, @MachineName, @CreationDate, @Type, @IsProtected, @Host, @Url, @HTTPMethod, @IPAddress, @Source, @Message, @Detail, @StatusCode, @SQL, @FullJson, @ErrorHash, @DuplicateCount{1})",
+                IncludeLastDuplicateDate ? ", LastDuplicateDate" : "", IncludeLastDuplicateDate ? ", @LastDuplicateDate" : ""), queryParams);
             }
         }
 
@@ -248,6 +273,7 @@ Select *
             var result = Error.FromJson(sqlError.FullJson);
             result.DuplicateCount = sqlError.DuplicateCount;
             result.DeletionDate = sqlError.DeletionDate;
+            if (IncludeLastDuplicateDate) result.LastDuplicateDate = sqlError.LastDuplicateDate;
             return result;
         }
 
