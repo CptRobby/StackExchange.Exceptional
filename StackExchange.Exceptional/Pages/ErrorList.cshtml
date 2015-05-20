@@ -9,7 +9,17 @@
     var log = ErrorStore.Default;
     var errors = new List<Error>();
     var total = log.GetAll(errors);
-    errors = errors.OrderByDescending(e => e.CreationDate).ToList();
+    bool useLastDuplicateDate = log.IncludeLastDuplicateDate;
+    if (useLastDuplicateDate)
+    {
+        //When sorting, fall back to the CreationDate if the LastDuplicateDate is null. Shouldn't happen, but just in case...
+        errors.Sort((x, y) => (y.LastDuplicateDate ?? y.CreationDate).CompareTo(x.LastDuplicateDate ?? x.CreationDate));
+    }
+    else
+    {
+        //Inverting x and y in the sort causes it to sort descending.
+        errors.Sort((x, y) => y.CreationDate.CompareTo(x.CreationDate)); 
+    }
     
     Layout = new Master { PageTitle = "Error Log" };
 }
@@ -41,7 +51,10 @@ else
                     <th>Error</th>
                     <th>Url</th>
                     <th>Remote IP</th>
-                    <th>Time</th>
+                    <th>First Time</th>
+                    @if (useLastDuplicateDate) {
+                    <th>Last Time</th>
+                    }
                     <th>Site</th>
                     <th>Server</th>
                 </tr>
@@ -77,6 +90,15 @@ else
                     </td>
                     <td>@e.IPAddress</td>
                     <td><span title="@(string.Format("{0:G} -- {1:u}", e.CreationDate, e.CreationDate.ToUniversalTime()))">@e.CreationDate.ToRelativeTime()</span></td>
+                    @if (useLastDuplicateDate) {
+                    <td>
+                        @if (e.LastDuplicateDate.HasValue) {
+                        <span title="@(string.Format("{0:G} -- {1:u}", e.LastDuplicateDate.Value, e.LastDuplicateDate.Value.ToUniversalTime()))">@e.LastDuplicateDate.Value.ToRelativeTime()</span>
+                        } else {
+                        @:unknown
+                        }
+                    </td>
+                    }
                     <td>@e.Host</td>
                     <td>@e.MachineName</td>
                 </tr>

@@ -53,6 +53,14 @@ namespace StackExchange.Exceptional.Stores
         public override string Name { get { return "JSON File Error Store"; } }
 
         /// <summary>
+        /// Gets whether the ErrorStore will use Error.LastDuplicateDate or not
+        /// </summary>
+        public override bool IncludeLastDuplicateDate
+        {
+            get { return Settings.Current.ErrorStore.IncludeLastDuplicateDate; }
+        }
+
+        /// <summary>
         /// Protects an error from deletion, by making it ReadOnly
         /// </summary>
         /// <param name="guid">The guid of the error to protect</param>
@@ -134,6 +142,7 @@ namespace StackExchange.Exceptional.Stores
         {
             // will allow fast comparisons of messages to see if we can ignore an incoming exception
             var detailHash = error.ErrorHash.HasValue ? error.ErrorHash.ToString() : "no-stack-trace";
+            if (IncludeLastDuplicateDate) error.LastDuplicateDate = ExtensionMethods.MaxDate(error.CreationDate, error.LastDuplicateDate);
             Error original;
 
             // before we persist 'error', see if there are any existing errors that it could be a duplicate of
@@ -141,6 +150,7 @@ namespace StackExchange.Exceptional.Stores
             {
                 // just update the existing file after incrementing its "duplicate count"
                 original.DuplicateCount = original.DuplicateCount.GetValueOrDefault(0) + error.DuplicateCount;
+                if (IncludeLastDuplicateDate) original.LastDuplicateDate = ExtensionMethods.MaxDate(original.LastDuplicateDate, error.LastDuplicateDate);
                 error.GUID = original.GUID;
                 error.IsOriginalError = false;
 
@@ -149,9 +159,11 @@ namespace StackExchange.Exceptional.Stores
                     throw new ArgumentOutOfRangeException("Unable to find a file for error with GUID = " + original.GUID);
 
                 using (var stream = f.Open(FileMode.Create))
-                using (var writer = new StreamWriter(stream))
                 {
-                    LogError(original, writer);
+                    using (var writer = new StreamWriter(stream))
+                    {
+                        LogError(original, writer);
+                    }
                 }
             }
             else
@@ -319,8 +331,7 @@ namespace StackExchange.Exceptional.Stores
                             }
                         }
                     }
-                    else
-                        break; // no other files are newer, no use checking
+                    else break; // no other files are newer, no use checking
                 }
             }
 

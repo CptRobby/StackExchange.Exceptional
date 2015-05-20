@@ -54,6 +54,24 @@ namespace StackExchange.Exceptional.Stores
         public override string Name { get { return "Memory Error Store"; } }
 
         /// <summary>
+        /// Gets whether the ErrorStore will use Error.LastDuplicateDate or not
+        /// </summary>
+        public override bool IncludeLastDuplicateDate
+        {
+            get { return Settings.Current.ErrorStore.IncludeLastDuplicateDate; }
+        }
+
+        /// <summary>
+        /// If this is true, then the criteria for rolling up errors uses the Error.LastDuplicateDate instead of Error.CreationDate.
+        /// This way the RollupSeconds would be the minimum number of seconds that would have to pass without matching errors occurring
+        /// before a new record would be created. Has no effect if IncludeLastDuplicateDate is not true.
+        /// </summary>
+        public bool RollupUsingLastDuplicateDate
+        {
+            get { return IncludeLastDuplicateDate && Settings.Current.ErrorStore.RollupUsingLastDuplicateDate; }
+        }
+
+        /// <summary>
         /// Protects an error from deletion, by setting IsProtected = true
         /// </summary>
         /// <param name="guid">The guid of the error to protect</param>
@@ -112,14 +130,17 @@ namespace StackExchange.Exceptional.Stores
             {
                 if (_errors == null)
                     _errors = new List<Error>(_size);
-
+                if (IncludeLastDuplicateDate) error.LastDuplicateDate = ExtensionMethods.MaxDate(error.CreationDate, error.LastDuplicateDate);
                 if (RollupThreshold.HasValue && _errors.Count > 0)
                 {
                     var minDate = DateTime.UtcNow.Add(RollupThreshold.Value.Negate());
-                    var dupe = _errors.FirstOrDefault(e => e.ErrorHash == error.ErrorHash && e.CreationDate > minDate);
+                    Error dupe = null;
+                    if (RollupUsingLastDuplicateDate) dupe = _errors.FirstOrDefault(e => e.ErrorHash == error.ErrorHash && e.LastDuplicateDate > minDate);
+                    else dupe = _errors.FirstOrDefault(e => e.ErrorHash == error.ErrorHash && e.CreationDate > minDate);
                     if (dupe != null)
                     {
                         dupe.DuplicateCount += error.DuplicateCount;
+                        if (IncludeLastDuplicateDate) dupe.LastDuplicateDate = ExtensionMethods.MaxDate(dupe.LastDuplicateDate, error.LastDuplicateDate);
                         error.GUID = dupe.GUID;
                         error.IsOriginalError = false;
                         return;

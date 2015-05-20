@@ -298,5 +298,27 @@ namespace StackExchange.Exceptional.Extensions
             var serializer = new JavaScriptSerializer();
             return serializer.Serialize(o);
         }
+
+        /// <summary>
+        /// Returns the maximum DateTime value passed in. Returns null only if nothing was passed in or all of the dates where null.
+        /// </summary>
+        public static DateTime? MaxDate(params DateTime?[] source)
+        {
+            return source.MaxDate();
+        }
+
+        /// <summary>
+        /// Returns the maximum DateTime value in the collection. Returns null only if the collection was empty or all of the dates where null.
+        /// </summary>
+        public static DateTime? MaxDate(this IEnumerable<DateTime?> source)
+        {
+            DateTime? max = null;
+            foreach (var dt in source)
+            {
+                if (!max.HasValue) max = dt;
+                else if (dt.HasValue && dt.Value > max.Value) max = dt; 
+            }
+            return max;
+        }
     }
 }

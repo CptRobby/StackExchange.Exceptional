@@ -155,6 +155,14 @@ namespace StackExchange.Exceptional
         /// Get the name of this error log store implementation.
         /// </summary>
         public virtual string Name { get { return GetType().Name; } }
+
+        /// <summary>
+        /// Gets whether the ErrorStore will use Error.LastDuplicateDate or not
+        /// </summary>
+        /// <remarks>
+        /// This returns false unless overridden so that stores that don't support it will not return true, regardless of what's in web.config
+        /// </remarks>
+        public virtual bool IncludeLastDuplicateDate { get { return false; } }
         
         private static string _applicationName { get; set; }
         /// <summary>
@@ -408,10 +416,12 @@ namespace StackExchange.Exceptional
         /// <remarks>These will be written to the store when we're able to connect again</remarks>
         public void QueueError(Error e)
         {
+            e.LastDuplicateDate = ExtensionMethods.MaxDate(e.CreationDate, e.LastDuplicateDate);
             // try and rollup in the queue, to save space
             foreach (var err in WriteQueue.Where(err => e.ErrorHash == err.ErrorHash))
             {
                 err.DuplicateCount++;
+                err.LastDuplicateDate = ExtensionMethods.MaxDate(err.LastDuplicateDate, e.LastDuplicateDate);
                 e.IsOriginalError = false;
                 return;
             }

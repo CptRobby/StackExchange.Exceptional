@@ -286,6 +286,11 @@ namespace StackExchange.Exceptional
         public DateTime CreationDate { get; set; }
 
         /// <summary>
+        /// Gets the time in UTC that the error last occured while being rolled up
+        /// </summary>
+        public DateTime? LastDuplicateDate { get; set; }
+
+        /// <summary>
         /// Gets the HTTP Status code associated with the request
         /// </summary>
         public int? StatusCode { get; set; }
