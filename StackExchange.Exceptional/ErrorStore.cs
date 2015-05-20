@@ -638,6 +638,7 @@ namespace StackExchange.Exceptional
                     catch (Exception gipe)
                     {
                         // if there was an error getting the IP, log it so we can display such in the view...and not fail to log the original error
+                        if (error.CustomData == null) error.CustomData = new Dictionary<string, string>();
                         error.CustomData.Add(CustomDataErrorKey, "Fetching IP Adddress: " + gipe);
                     }
                 }
