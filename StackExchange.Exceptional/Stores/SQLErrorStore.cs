@@ -273,6 +273,7 @@ Select *
             var result = Error.FromJson(sqlError.FullJson);
             result.DuplicateCount = sqlError.DuplicateCount;
             result.DeletionDate = sqlError.DeletionDate;
+            result.IsProtected = sqlError.IsProtected;
             if (IncludeLastDuplicateDate) result.LastDuplicateDate = sqlError.LastDuplicateDate;
             return result;
         }
