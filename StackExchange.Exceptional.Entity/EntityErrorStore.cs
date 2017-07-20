@@ -7,7 +7,7 @@ namespace StackExchange.Exceptional.Entity
 {
     public class EntityErrorStore : ErrorStore
     {
-        public static IPersistanceProvider PersistanceProvider { get; set; }
+        public static IPersistenceProvider PersistanceProvider { get; set; }
 
         public EntityErrorStore(ErrorStoreSettings settings) : base(settings) { }
 
@@ -94,11 +94,11 @@ namespace StackExchange.Exceptional.Entity
             if (_AttemptedConfig) return false;
             _AttemptedConfig = true;
             var assm = System.Reflection.Assembly.GetExecutingAssembly();
-            var ti = typeof(IPersistanceProvider);
+            var ti = typeof(IPersistenceProvider);
             var implTypes = assm.GetTypes().Where(x => x.IsClass && !x.IsAbstract && x.GetInterface(ti.Name) == ti);
             var match = implTypes.FirstOrDefault(x => x.GetConstructor(Type.EmptyTypes) != null);
             if (match == null) return false;
-            PersistanceProvider = Activator.CreateInstance(match, true) as IPersistanceProvider;
+            PersistanceProvider = Activator.CreateInstance(match, true) as IPersistenceProvider;
             return PersistanceProvider != null;
         }
     }

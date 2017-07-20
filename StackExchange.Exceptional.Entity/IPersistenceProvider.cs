@@ -9,7 +9,7 @@ namespace StackExchange.Exceptional.Entity
     /// <summary>
     /// This interface must be implemented in user code 
     /// </summary>
-    public interface IPersistanceProvider
+    public interface IPersistenceProvider
     {
         bool DeleteAllErrors(string applicationName = null);
         bool DeleteError(Guid guid);

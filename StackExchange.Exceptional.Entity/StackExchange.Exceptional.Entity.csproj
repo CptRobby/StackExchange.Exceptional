@@ -40,7 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EntityErrorStore.cs" />
-    <Compile Include="IPersistanceProvider.cs" />
+    <Compile Include="IPersistenceProvider.cs" />
     <Compile Include="IPersistedError.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
