@@ -8,7 +8,7 @@ namespace StackExchange.Exceptional.Entity
 {
     /// <summary>
     /// This interface is a means of providing a simplified form of <see cref="Error"/> for communication between the <see cref="EntityErrorStore"/>
-    /// and the implementation of <see cref="IPersistanceProvider"/> in the user's code. The components of this interface that absolutely must be
+    /// and the implementation of <see cref="IPersistenceProvider"/> in the user's code. The components of this interface that absolutely must be
     /// implemented are the GUID and FullJson properties. ErrorHash would be recommended for matching existing errors. Everything else is only required
     /// if you want to see it when viewing the ErrorList and ErrorInfo views.
     /// </summary>

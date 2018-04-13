@@ -123,9 +123,26 @@ namespace StackExchange.Exceptional
                 {
                     try
                     {
-                        return new NameValueCollection(getter(request));
+                        var original = getter(request);
+                        var copy = new NameValueCollection();
+                        foreach (var key in original.AllKeys)
+                        {
+                            try
+                            {
+                                foreach (var value in original.GetValues(key))
+                                {
+                                    copy.Add(key, value);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Trace.WriteLine($"Error getting collection values [{key}]: {e.Message}");
+                                copy.Add(key, $"[Error getting values: {e.Message}]");
+                            }
+                        }
+                        return copy;
                     }
-                    catch (HttpRequestValidationException e)
+                    catch (Exception e)
                     {
                         Trace.WriteLine("Error parsing collection: " + e.Message);
                         return new NameValueCollection {{CollectionErrorKey, e.Message}};
